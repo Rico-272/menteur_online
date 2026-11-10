@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jeu du Menteur</title>
+    <script src="https://socket.io"></script>
+</head>
+<body>
+    <h1>Jeu du Menteur 🃏</h1>
+    
+    <div id="login">
+        <input type="text" id="username" placeholder="Votre pseudo">
+        <button onclick="joinGame()">Rejoindre</button>
+    </div>
+
+    <div id="game" style="display:none;">
+        <h3 id="welcome"></h3>
+        <button onclick="sendAction('bet', '3 Dames')">Parier "3 Dames"</button>
+        <button onclick="sendAction('bluff', '')">Crier MENTEUR !</button>
+        
+        <h3>Historique de la partie :</h3>
+        <ul id="history"></ul>
+    </div>
+
+    <script>
+        const socket = io();
+        let myUsername = "";
+
+        function joinGame() {
+            myUsername = document.getElementById('username').value;
+            if(myUsername) {
+                socket.emit('join', { username: myUsername });
+                document.getElementById('login').style.display = 'none';
+                document.getElementById('game').style.display = 'block';
+                document.getElementById('welcome').innerText = "Joueur : " + myUsername;
+            }
+        }
+
+        function sendAction(action, detail) {
+            socket.emit('play_action', { username: myUsername, action: action, detail: detail });
+        }
+
+        socket.on('update_game', (state) => {
+            const historyList = document.getElementById('history');
+            historyList.innerHTML = "";
+            state.history.forEach(msg => {
+                const li = document.createElement('li');
+                li.innerText = msg;
+                historyList.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
