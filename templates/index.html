@@ -4,113 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salon du Menteur en Ligne</title>
-    <script src="https://socket.io"></script>
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #1a472a url('/static/bg_table.jpg') no-repeat center center fixed;
-            background-size: cover;
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            background-size: cover; color: #ffffff;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
         }
-
         .panel {
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid #d4af37;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-            width: 90%;
-            max-width: 600px;
-            text-align: center;
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #d4af37; border-radius: 15px;
+            padding: 30px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            width: 90%; max-width: 600px; text-align: center; backdrop-filter: blur(5px);
         }
-
-        h1 {
-            color: #d4af37;
-            margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
+        h1 { color: #d4af37; margin-top: 0; text-transform: uppercase; letter-spacing: 2px; }
         input[type="text"] {
-            padding: 12px 20px;
-            font-size: 16px;
-            border: 2px solid #d4af37;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            outline: none;
-            width: 70%;
-            margin-bottom: 20px;
+            padding: 12px 20px; font-size: 16px; border: 2px solid #d4af37; border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1); color: white; outline: none; width: 70%; margin-bottom: 20px;
         }
-
         button {
-            background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
-            border: none;
-            color: black;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 25px;
-            cursor: pointer;
-            margin: 5px;
-            transition: all 0.2s;
+            background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%); border: none; color: black;
+            padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer; margin: 5px; transition: all 0.2s;
         }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
-        }
-
-        button.bluff-btn {
-            background: linear-gradient(135deg, #c0392b 0%, #962d22 100%);
-            color: white;
-        }
-
-        .hand-container {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin: 25px 0;
-            flex-wrap: wrap;
-        }
-
-        .card-img {
-            width: 90px;
-            height: auto;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: transform 0.2s;
-        }
-
-        .card-img:hover {
-            transform: translateY(-10px);
-        }
-
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); }
+        button.bluff-btn { background: linear-gradient(135deg, #c0392b 0%, #962d22 100%); color: white; }
+        .hand-container { display: flex; justify-content: center; gap: 12px; margin: 25px 0; flex-wrap: wrap; }
+        .card-img { width: 90px; height: auto; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s; }
+        .card-img:hover { transform: translateY(-10px); }
         .history-box {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 150px;
-            overflow-y: auto;
-            text-align: left;
-            margin-top: 20px;
-            border-left: 4px solid #d4af37;
+            background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 15px;
+            max-height: 150px; overflow-y: auto; text-align: left; margin-top: 20px; border-left: 4px solid #d4af37;
         }
-
         ul { list-style: none; padding: 0; margin: 0; }
         li { padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <!-- Écran de Connexion -->
     <div id="login" class="panel">
         <h1>Menteur en Ligne 🃏</h1>
         <p>Choisissez un pseudonyme pour vous installer à la table</p>
@@ -119,14 +49,10 @@
         <button onclick="joinGame()">Prendre Place</button>
     </div>
 
-    <!-- Plateau de Jeu -->
     <div id="game" class="panel" style="display:none;">
         <h1 id="welcome">Table de Jeu</h1>
-        
         <h3>Votre main secrète :</h3>
-        <div id="my-hand" class="hand-container">
-            <!-- Les images de vos vraies cartes vont s'afficher ici de façon dynamique -->
-        </div>
+        <div id="my-hand" class="hand-container"></div>
 
         <div style="margin-top: 20px;">
             <button onclick="sendAction('bet', 'Un As')">Annoncer "Un As"</button>
@@ -134,39 +60,23 @@
         </div>
         
         <h3>Journal de la table :</h3>
-        <div class="history-box">
-            <ul id="history"></ul>
-        </div>
+        <div class="history-box"><ul id="history"></ul></div>
     </div>
 
     <script>
-        // Connexion sécurisée synchronisée sur l'adresse de Render
-        const socket = io(window.location.origin, {
-            transports: ['websocket', 'polling']
-        });
+        // Détermine l'adresse WebSocket automatiquement (ws:// ou wss://)
+        const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const socket = new WebSocket(wsProtocol + window.location.host + "/ws");
         
         let myUsername = "";
-        let isConnected = false;
 
-        socket.on('connect', () => {
-            console.log("Connecté au serveur !");
-            isConnected = true;
-        });
+        socket.onopen = () => { console.log("Connecté au serveur FastAPI !"); };
 
         function joinGame() {
             myUsername = document.getElementById('username').value.trim();
-            
-            if (!myUsername) {
-                alert("Veuillez entrer un pseudo valide.");
-                return;
-            }
+            if (!myUsername) return alert("Veuillez entrer un pseudo valide.");
 
-            if (!isConnected) {
-                alert("Connexion au serveur en cours... Réessayez dans un court instant.");
-                return;
-            }
-
-            socket.emit('join', { username: myUsername });
+            socket.send(JSON.stringify({ type: "join", username: myUsername }));
             
             document.getElementById('login').style.display = 'none';
             document.getElementById('game').style.display = 'block';
@@ -174,45 +84,38 @@
         }
 
         function sendAction(action, detail) {
-            if(myUsername) {
-                socket.emit('play_action', { username: myUsername, action: action, detail: detail });
+            if (myUsername && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: "play_action", username: myUsername, action: action, detail: detail }));
             }
         }
 
-        socket.on('update_game', (state) => {
-            // Mise à jour de l'historique de jeu
-            const historyList = document.getElementById('history');
-            historyList.innerHTML = "";
-            if (state.history) {
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "update") {
+                const state = data.state;
+                
+                // Historique
+                const historyList = document.getElementById('history');
+                historyList.innerHTML = "";
                 state.history.forEach(msg => {
-                    const li = document.createElement('li');
-                    li.innerText = msg;
+                    const li = document.createElement('li'); li.innerText = msg;
                     historyList.appendChild(li);
                 });
-            }
-            
-            const box = document.querySelector('.history-box');
-            if(box) box.scrollTop = box.scrollHeight;
+                document.querySelector('.history-box').scrollTop = document.querySelector('.history-box').scrollHeight;
 
-            // Affichage dynamique et ciblé des vraies cartes de l'utilisateur
-            const handContainer = document.getElementById('my-hand');
-            if (!handContainer) return;
-            handContainer.innerHTML = ""; 
-            
-            if (state.players && state.players[myUsername]) {
-                const me = state.players[myUsername];
-                if (me.cards) {
-                    me.cards.forEach(cardFileName => {
+                // Cartes du joueur
+                const handContainer = document.getElementById('my-hand');
+                handContainer.innerHTML = ""; 
+                if (state.players[myUsername] && state.players[myUsername].cards) {
+                    state.players[myUsername].cards.forEach(cardFileName => {
                         const img = document.createElement('img');
-                        // Charge l'image en local à partir de son nom exact + extension .png
                         img.src = `/static/cards/${cardFileName}.png`;
-                        img.alt = cardFileName;
                         img.className = "card-img";
                         handContainer.appendChild(img);
                     });
                 }
             }
-        });
+        };
     </script>
 </body>
 </html>
