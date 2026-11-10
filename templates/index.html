@@ -2,24 +2,166 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Jeu du Menteur</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salon du Menteur en Ligne</title>
     <script src="https://socket.io"></script>
+    <style>
+        /* Style général avec le tapis de jeu en arrière-plan */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a472a url('/static/bg_table.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Conteneurs principaux style "Casino" */
+        .panel {
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid #d4af37; /* Bordure dorée */
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            color: #d4af37;
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Formulaires et entrées textuelles */
+        input[type="text"] {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #d4af37;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+            width: 70%;
+            margin-bottom: 20px;
+        }
+
+        /* Boutons de jeu */
+        button {
+            background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
+            border: none;
+            color: black;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        button.bluff-btn {
+            background: linear-gradient(135deg, #c0392b 0%, #962d22 100%);
+            color: white;
+        }
+
+        button.bluff-btn:hover {
+            box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5);
+        }
+
+        /* Zone d'affichage des cartes physiques */
+        .hand-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .card-img {
+            width: 80px;
+            height: auto;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+        }
+
+        .card-img:hover {
+            transform: translateY(-10px) rotate(-2deg);
+        }
+
+        /* Historique des logs du jeu */
+        .history-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            margin-top: 20px;
+            border-left: 4px solid #d4af37;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Jeu du Menteur 🃏</h1>
-    
-    <div id="login">
-        <input type="text" id="username" placeholder="Votre pseudo">
-        <button onclick="joinGame()">Rejoindre</button>
+
+    <!-- Écran de Connexion -->
+    <div id="login" class="panel">
+        <h1>Menteur Royal 🃏</h1>
+        <p>Entrez votre pseudonyme pour rejoindre la table</p>
+        <input type="text" id="username" placeholder="Pseudo..." autocomplete="off">
+        <br>
+        <button onclick="joinGame()">Prendre Place</button>
     </div>
 
-    <div id="game" style="display:none;">
-        <h3 id="welcome"></h3>
-        <button onclick="sendAction('bet', '3 Dames')">Parier "3 Dames"</button>
-        <button onclick="sendAction('bluff', '')">Crier MENTEUR !</button>
+    <!-- Interface Principale de Jeu -->
+    <div id="game" class="panel" style="display:none;">
+        <h1 id="welcome">Table de Jeu</h1>
         
-        <h3>Historique de la partie :</h3>
-        <ul id="history"></ul>
+        <!-- Exemple visuel de votre main actuelle (images chargées en local) -->
+        <h3>Votre main actuelle :</h3>
+        <div class="hand-container">
+            <!-- Flask ira chercher ces images directement dans le dossier static -->
+            <img src="/static/cards/QS.png" alt="Dame Pique" class="card-img">
+            <img src="/static/cards/KH.png" alt="Roi Cœur" class="card-img">
+            <img src="/static/cards/card_back.png" alt="Dos Carte" class="card-img">
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button onclick="sendAction('bet', '3 Dames')">Parier "3 Dames"</button>
+            <button class="bluff-btn" onclick="sendAction('bluff', '')">Crier MENTEUR !</button>
+        </div>
+        
+        <h3>Déroulement du jeu :</h3>
+        <div class="history-box">
+            <ul id="history"></ul>
+        </div>
     </div>
 
     <script>
@@ -27,7 +169,7 @@
         let myUsername = "";
 
         function joinGame() {
-            myUsername = document.getElementById('username').value;
+            myUsername = document.getElementById('username').value.trim();
             if(myUsername) {
                 socket.emit('join', { username: myUsername });
                 document.getElementById('login').style.display = 'none';
@@ -48,6 +190,10 @@
                 li.innerText = msg;
                 historyList.appendChild(li);
             });
+            
+            // Permet de forcer le défilement automatique du journal vers le bas
+            const box = document.querySelector('.history-box');
+            box.scrollTop = box.scrollHeight;
         });
     </script>
 </body>
