@@ -5,13 +5,14 @@ from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret_menteur_key'
+# Support optimal pour le déploiement en temps réel
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# --- CORRESPONDANCE EXACTE AVEC VOS FICHIERS LOCAUX ---
+# --- CONFIGURATION EXACTE DE VOS CARTES ---
 VALEURS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace']
 ENSEIGNES = ['clubs', 'diamonds', 'hearts', 'spades']
 
-# Génère automatiquement les 52 noms exacts (ex: "jack_of_spades", "10_of_hearts")
+# Génère la liste des 52 noms de fichiers sans extension (ex: "2_of_clubs")
 PAQUET_GENERIC = [f"{v}_of_{e}" for v in VALEURS for e in ENSEIGNES]
 
 game_state = {
@@ -30,7 +31,7 @@ def handle_join(data):
     player_id = request.sid if hasattr(request, 'sid') else None
     
     if username and username not in game_state["players"]:
-        # Distribution de 5 cartes aléatoires uniques à partir de la liste configurée
+        # Distribution de 5 cartes aléatoires uniques
         main_du_joueur = random.sample(PAQUET_GENERIC, 5)
         
         game_state["players"][username] = {
