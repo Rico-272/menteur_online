@@ -6,7 +6,6 @@
     <title>Salon du Menteur en Ligne</title>
     <script src="https://socket.io"></script>
     <style>
-        /* Style général avec le tapis de jeu en arrière-plan */
         body {
             margin: 0;
             padding: 0;
@@ -20,13 +19,12 @@
             min-height: 100vh;
         }
 
-        /* Conteneurs principaux style "Casino" */
         .panel {
-            background: rgba(0, 0, 0, 0.75);
-            border: 2px solid #d4af37; /* Bordure dorée */
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #d4af37;
             border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             width: 90%;
             max-width: 600px;
             text-align: center;
@@ -38,10 +36,8 @@
             margin-top: 0;
             text-transform: uppercase;
             letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
         }
 
-        /* Formulaires et entrées textuelles */
         input[type="text"] {
             padding: 12px 20px;
             font-size: 16px;
@@ -54,7 +50,6 @@
             margin-bottom: 20px;
         }
 
-        /* Boutons de jeu */
         button {
             background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
             border: none;
@@ -64,9 +59,8 @@
             font-weight: bold;
             border-radius: 25px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
             margin: 5px;
+            transition: all 0.2s;
         }
 
         button:hover {
@@ -79,32 +73,26 @@
             color: white;
         }
 
-        button.bluff-btn:hover {
-            box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5);
-        }
-
-        /* Zone d'affichage des cartes physiques */
         .hand-container {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             margin: 25px 0;
             flex-wrap: wrap;
         }
 
         .card-img {
-            width: 80px;
+            width: 90px;
             height: auto;
             border-radius: 6px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             transition: transform 0.2s;
         }
 
         .card-img:hover {
-            transform: translateY(-10px) rotate(-2deg);
+            transform: translateY(-10px);
         }
 
-        /* Historique des logs du jeu */
         .history-box {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
@@ -116,84 +104,114 @@
             border-left: 4px solid #d4af37;
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        li {
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 14px;
-        }
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
     </style>
 </head>
 <body>
 
     <!-- Écran de Connexion -->
     <div id="login" class="panel">
-        <h1>Menteur Royal 🃏</h1>
-        <p>Entrez votre pseudonyme pour rejoindre la table</p>
-        <input type="text" id="username" placeholder="Pseudo..." autocomplete="off">
+        <h1>Menteur en Ligne 🃏</h1>
+        <p>Choisissez un pseudonyme pour vous installer à la table</p>
+        <input type="text" id="username" placeholder="Votre pseudo..." autocomplete="off">
         <br>
         <button onclick="joinGame()">Prendre Place</button>
     </div>
 
-    <!-- Interface Principale de Jeu -->
+    <!-- Plateau de Jeu -->
     <div id="game" class="panel" style="display:none;">
         <h1 id="welcome">Table de Jeu</h1>
         
-        <!-- Exemple visuel de votre main actuelle (images chargées en local) -->
-        <h3>Votre main actuelle :</h3>
-        <div class="hand-container">
-            <!-- Flask ira chercher ces images directement dans le dossier static -->
-            <img src="/static/cards/QS.png" alt="Dame Pique" class="card-img">
-            <img src="/static/cards/KH.png" alt="Roi Cœur" class="card-img">
-            <img src="/static/cards/card_back.png" alt="Dos Carte" class="card-img">
+        <h3>Votre main secrète :</h3>
+        <div id="my-hand" class="hand-container">
+            <!-- Les images de vos vraies cartes vont s'afficher ici de façon dynamique -->
         </div>
 
         <div style="margin-top: 20px;">
-            <button onclick="sendAction('bet', '3 Dames')">Parier "3 Dames"</button>
+            <button onclick="sendAction('bet', 'Un As')">Annoncer "Un As"</button>
             <button class="bluff-btn" onclick="sendAction('bluff', '')">Crier MENTEUR !</button>
         </div>
         
-        <h3>Déroulement du jeu :</h3>
+        <h3>Journal de la table :</h3>
         <div class="history-box">
             <ul id="history"></ul>
         </div>
     </div>
 
     <script>
-        const socket = io();
+        // Connexion sécurisée synchronisée sur l'adresse de Render
+        const socket = io(window.location.origin, {
+            transports: ['websocket', 'polling']
+        });
+        
         let myUsername = "";
+        let isConnected = false;
+
+        socket.on('connect', () => {
+            console.log("Connecté au serveur !");
+            isConnected = true;
+        });
 
         function joinGame() {
             myUsername = document.getElementById('username').value.trim();
-            if(myUsername) {
-                socket.emit('join', { username: myUsername });
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('game').style.display = 'block';
-                document.getElementById('welcome').innerText = "Joueur : " + myUsername;
+            
+            if (!myUsername) {
+                alert("Veuillez entrer un pseudo valide.");
+                return;
             }
+
+            if (!isConnected) {
+                alert("Connexion au serveur en cours... Réessayez dans un court instant.");
+                return;
+            }
+
+            socket.emit('join', { username: myUsername });
+            
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            document.getElementById('welcome').innerText = "Joueur : " + myUsername;
         }
 
         function sendAction(action, detail) {
-            socket.emit('play_action', { username: myUsername, action: action, detail: detail });
+            if(myUsername) {
+                socket.emit('play_action', { username: myUsername, action: action, detail: detail });
+            }
         }
 
         socket.on('update_game', (state) => {
+            // Mise à jour de l'historique de jeu
             const historyList = document.getElementById('history');
             historyList.innerHTML = "";
-            state.history.forEach(msg => {
-                const li = document.createElement('li');
-                li.innerText = msg;
-                historyList.appendChild(li);
-            });
+            if (state.history) {
+                state.history.forEach(msg => {
+                    const li = document.createElement('li');
+                    li.innerText = msg;
+                    historyList.appendChild(li);
+                });
+            }
             
-            // Permet de forcer le défilement automatique du journal vers le bas
             const box = document.querySelector('.history-box');
-            box.scrollTop = box.scrollHeight;
+            if(box) box.scrollTop = box.scrollHeight;
+
+            // Affichage dynamique et ciblé des vraies cartes de l'utilisateur
+            const handContainer = document.getElementById('my-hand');
+            if (!handContainer) return;
+            handContainer.innerHTML = ""; 
+            
+            if (state.players && state.players[myUsername]) {
+                const me = state.players[myUsername];
+                if (me.cards) {
+                    me.cards.forEach(cardFileName => {
+                        const img = document.createElement('img');
+                        // Charge l'image en local à partir de son nom exact + extension .png
+                        img.src = `/static/cards/${cardFileName}.png`;
+                        img.alt = cardFileName;
+                        img.className = "card-img";
+                        handContainer.appendChild(img);
+                    });
+                }
+            }
         });
     </script>
 </body>
