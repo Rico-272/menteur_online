@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Jeu du Menteur - 64 Cartes</title>
+  <title>Duel 64 Cartes - Menteur</title>
   <style>
     body {
       background-color: #2e7d32;
@@ -41,64 +41,42 @@
       gap: 10px;
     }
 
-    #ligne-badges {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
     #badge-role {
       background-color: #ffd54f;
       color: #212121;
       font-weight: bold;
-      padding: 8px 18px;
+      padding: 8px 20px;
       border-radius: 20px;
-      font-size: 15px;
+      font-size: 16px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    #badge-tour {
-      background-color: #1565c0;
-      color: #ffffff;
-      font-weight: bold;
-      padding: 8px 18px;
-      border-radius: 20px;
-      font-size: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    #badge-tour.actif {
-      background-color: #ff6f00;
     }
 
     #info-action {
       color: white;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 10px 20px;
-      border-radius: 16px;
-      font-size: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 14px;
       text-align: center;
-      line-height: 1.4;
     }
 
-    #zone-centrale {
+    #tapis-de-jeu {
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      gap: 16px;
+      align-items: center;
+      gap: 15px;
       flex-grow: 1;
       width: 100%;
     }
 
     #info-tas {
       color: white;
+      font-size: 14px;
+      font-weight: bold;
       background: rgba(0, 0, 0, 0.25);
       padding: 5px 14px;
       border-radius: 12px;
-      font-size: 14px;
-      font-weight: bold;
     }
 
     .carte {
@@ -149,18 +127,12 @@
       background-color: #d32f2f;
       color: white;
       border: 3px solid #ffffff;
-      padding: 12px 28px;
-      font-size: 18px;
+      padding: 10px 26px;
+      font-size: 17px;
       font-weight: bold;
-      border-radius: 30px;
+      border-radius: 25px;
       cursor: pointer;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
-      transition: transform 0.2s ease, opacity 0.2s ease;
-    }
-
-    #btn-menteur:hover:not(:disabled) {
-      transform: scale(1.06);
-      background-color: #b71c1c;
+      box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
     }
 
     #btn-menteur:disabled {
@@ -173,10 +145,10 @@
       background-color: #ffd54f;
       color: #212121;
       border: none;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 10px 22px;
+      font-size: 15px;
       font-weight: bold;
-      border-radius: 25px;
+      border-radius: 20px;
       cursor: pointer;
     }
 
@@ -230,6 +202,11 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
+
+    .bouton-carte.actif {
+      outline: 3px solid #ffd54f;
+      transform: translateY(-8px);
+    }
   </style>
 </head>
 <body>
@@ -241,17 +218,14 @@
   </div>
 
   <div id="en-tete">
-    <div id="ligne-badges">
-      <div id="badge-role">Connexion au serveur...</div>
-      <div id="badge-tour">En attente...</div>
-    </div>
+    <div id="badge-role">Connexion au serveur...</div>
     <div id="info-action">En attente...</div>
   </div>
 
-  <div id="zone-centrale">
-    <div id="info-tas">Tas au centre : 0 carte | Adversaire : 0 carte</div>
+  <div id="tapis-de-jeu">
+    <div id="info-tas">Tas au centre : 0 carte</div>
 
-    <div id="tapis-de-jeu">
+    <div>
       <div id="carte-coeur" class="carte rouge"><div class="symbole"></div></div>
       <div id="carte-carreau" class="carte rouge"><div class="symbole"></div></div>
       <div id="carte-trefle" class="carte noir"><div class="symbole"></div></div>
@@ -260,7 +234,7 @@
     </div>
 
     <button id="btn-menteur" onclick="crierMenteur()" disabled>Menteur !</button>
-    <button id="btn-rejouer" onclick="relancerPartie()">Rejouer une partie</button>
+    <button id="btn-rejouer" onclick="relancerPartie()">Rejouer</button>
   </div>
 
   <div id="main-joueur">
@@ -290,7 +264,6 @@
     const ws = new WebSocket(`${protocole}//${window.location.host}/ws`);
     
     const badgeRole = document.getElementById("badge-role");
-    const badgeTour = document.getElementById("badge-tour");
     const infoAction = document.getElementById("info-action");
     const btnMenteur = document.getElementById("btn-menteur");
     const btnRejouer = document.getElementById("btn-rejouer");
@@ -298,21 +271,15 @@
     let monRole = "";
     let duelActif = false;
     let cEstMonTour = false;
+    let partieFinie = false;
     let maMain = { coeur: 0, carreau: 0, trefle: 0, pique: 0 };
-
-    const nomsFr = {
-      coeur: "Cœur ♥",
-      carreau: "Carreau ♦",
-      trefle: "Trèfle ♣",
-      pique: "Pique ♠"
-    };
 
     function mettreAJourBoutons() {
       const types = ["coeur", "carreau", "trefle", "pique"];
       types.forEach(type => {
         const nb = maMain[type];
         document.getElementById("compte-" + type).textContent = nb;
-        document.getElementById("btn-" + type).disabled = !(duelActif && cEstMonTour && nb > 0);
+        document.getElementById("btn-" + type).disabled = !(duelActif && cEstMonTour && !partieFinie && nb > 0);
       });
     }
 
@@ -341,81 +308,86 @@
         if (data.nb_joueurs < 2) {
           duelActif = false;
           cEstMonTour = false;
+          partieFinie = false;
           maMain = { coeur: 0, carreau: 0, trefle: 0, pique: 0 };
-          badgeTour.textContent = "En attente (1/2)";
-          badgeTour.classList.remove("actif");
           infoAction.textContent = "En attente de l'autre joueur (1/2)...";
+          document.getElementById("info-tas").textContent = "Tas au centre : 0 carte";
           btnMenteur.disabled = true;
           btnRejouer.style.display = "none";
           afficherCarte("dos");
         } else {
           duelActif = true;
+          cEstMonTour = (data.tour === monRole);
+          infoAction.textContent = cEstMonTour ? "Duel prêt ! À vous de poser la 1ère carte." : "Duel prêt ! Joueur 1 commence.";
         }
         mettreAJourBoutons();
       }
 
-Utilisez le code avec précaution.
-else if (data.type === "etat_jeu") {
-afficherCarte(data.carte);
-const cartesAdv = (monRole === "J1") ? data.nb_j2 : data.nb_j1;
-document.getElementById("info-tas").textContent = Tas au centre : ${data.taille_tas} carte(s) | Adversaire : ${cartesAdv} carte(s);
-let texte = data.info;
-if (data.annonce && !data.partie_finie) {
-texte += <br><strong>Carte annoncée : ${nomsFr[data.annonce]}</strong>;
-}
-infoAction.innerHTML = texte;
-if (data.partie_finie) {
-cEstMonTour = false;
-badgeTour.textContent = "Partie terminée";
-badgeTour.classList.remove("actif");
-btnMenteur.disabled = true;
-btnRejouer.style.display = "inline-block";
-} else {
-btnRejouer.style.display = "none";
-cEstMonTour = (data.tour === monRole);
-if (cEstMonTour) {
-badgeTour.textContent = "C'est votre tour !";
-badgeTour.classList.add("actif");
-} else {
-badgeTour.textContent = "Tour de l'adversaire...";
-badgeTour.classList.remove("actif");
-}
-// Bouton Menteur actif uniquement si c'est mon tour et qu'il y a au moins 1 carte face cachée (tas >= 2)
-btnMenteur.disabled = !(cEstMonTour && data.taille_tas >= 2);
-}
-mettreAJourBoutons();
-}
-};
-ws.onclose = () => {
-if (document.getElementById("ecran-bloque").style.display !== "flex") {
-badgeRole.textContent = "Déconnecté du serveur";
-badgeRole.style.backgroundColor = "#ef5350";
-badgeRole.style.color = "white";
-duelActif = false;
-btnMenteur.disabled = true;
-mettreAJourBoutons();
-}
-};
-function envoyerChoix(nomCarte) {
-if (ws.readyState === WebSocket.OPEN && duelActif && cEstMonTour && maMain[nomCarte] > 0) {
-ws.send(JSON.stringify({ action: "jouer_carte", valeur: nomCarte }));
-}
-}
-function crierMenteur() {
-if (ws.readyState === WebSocket.OPEN && duelActif && cEstMonTour) {
-ws.send(JSON.stringify({ action: "menteur" }));
-}
-}
-function relancerPartie() {
-if (ws.readyState === WebSocket.OPEN) {
-ws.send(JSON.stringify({ action: "rejouer" }));
-}
-}
-function afficherCarte(nomCarte) {
-document.querySelectorAll('.carte').forEach(c => c.classList.remove('visible'));
-const carteCible = document.getElementById('carte-' + nomCarte);
-if (carteCible) {
-void carteCible.offsetWidth;
-carteCible.classList.add('visible');
-}
-}
+      else if (data.type === "carte") {
+        afficherCarte(data.valeur);
+        partieFinie = data.partie_finie || false;
+        cEstMonTour = (data.tour === monRole);
+
+        document.getElementById("info-tas").textContent = `Tas au centre : ${data.taille_tas} carte(s)`;
+        
+        let texteTour = partieFinie ? "" : (cEstMonTour ? " — C'est VOTRE tour !" : " — Tour de l'adversaire");
+        infoAction.textContent = data.par + texteTour;
+
+        btnMenteur.disabled = !(duelActif && cEstMonTour && !partieFinie && data.taille_tas >= 2);
+
+        btnRejouer.style.display = partieFinie ? "inline-block" : "none";
+
+        mettreAJourBoutons();
+      }
+    };
+
+    ws.onclose = () => {
+      if (document.getElementById("ecran-bloque").style.display !== "flex") {
+        badgeRole.textContent = "Déconnecté du serveur";
+        badgeRole.style.backgroundColor = "#ef5350";
+        badgeRole.style.color = "white";
+        duelActif = false;
+        btnMenteur.disabled = true;
+        mettreAJourBoutons();
+      }
+    };
+
+    function envoyerChoix(nomCarte) {
+      if (ws.readyState === WebSocket.OPEN && duelActif && cEstMonTour && maMain[nomCarte] > 0) {
+        ws.send(JSON.stringify({ action: "jouer_carte", valeur: nomCarte }));
+      }
+    }
+
+    function crierMenteur() {
+      if (ws.readyState === WebSocket.OPEN && duelActif && cEstMonTour) {
+        ws.send(JSON.stringify({ action: "menteur" }));
+      }
+    }
+
+    function relancerPartie() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "rejouer" }));
+      }
+    }
+
+    function afficherCarte(nomCarte) {
+      document.querySelectorAll('.carte').forEach(c => c.classList.remove('visible'));
+      document.querySelectorAll('.bouton-carte').forEach(b => b.classList.remove('actif'));
+
+      const carteCible = document.getElementById('carte-' + nomCarte);
+      if (carteCible) {
+        void carteCible.offsetWidth;
+        carteCible.classList.add('visible');
+      }
+
+      if (nomCarte !== "dos") {
+        const boutonCible = document.getElementById('btn-' + nomCarte);
+        if (boutonCible) {
+          boutonCible.classList.add('actif');
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
