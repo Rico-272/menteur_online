@@ -11,13 +11,12 @@ mains = {
     "J2": {"coeur": 0, "carreau": 0, "trefle": 0, "pique": 0}
 }
 
-# Variables d'état du jeu du Menteur
 etat = {
-    "tour": "J1",               # Qui doit jouer ("J1" ou "J2")
-    "tas": [],                  # Liste des cartes posées au milieu
-    "carte_annoncee": None,     # L'enseigne de la 1ère carte posée face visible
-    "dernier_poseur": None,     # Qui a posé la dernière carte face cachée
-    "carte_visuelle": "dos",    # Ce qui s'affiche au centre ("coeur", ..., ou "dos")
+    "tour": "J1",
+    "tas": [],
+    "carte_annoncee": None,
+    "dernier_poseur": None,
+    "carte_visuelle": "dos",
     "partie_terminee": False
 }
 
@@ -51,15 +50,23 @@ def reinitialiser_partie():
     etat["carte_visuelle"] = "dos"
     etat["partie_terminee"] = False
 
+async def verifier_connexions_actives():
+    """Teste si J1 et J2 sont vraiment vivants, sinon libère leur place."""
+    for role in ["J1", "J2"]:
+        ws = places[role]
+        if ws is not None:
+            try:
+                await ws.send_text(json.dumps({"type": "ping"}))
+            except Exception:
+                places[role] = None
+
 async def envoyer_etat_complet(message_info: str = ""):
-    """Envoie à chaque joueur sa main privée et l'état public de la table."""
     nb_joueurs = sum(1 for v in places.values() if v is not None)
     
     for role in ["J1", "J2"]:
         ws = places[role]
         if ws is not None:
             autre = "J2" if role == "J1" else "J1"
-            # On peut cliquer sur "Menteur" uniquement s'il y a au moins 2 cartes dans le tas (donc une carte face cachée)
             peut_crier_menteur = (
                 nb_joueurs == 2 
                 and not etat["partie_terminee"]
@@ -84,11 +91,14 @@ async def envoyer_etat_complet(message_info: str = ""):
             try:
                 await ws.send_text(json.dumps(donnees))
             except Exception:
-                pass
+                places[role] = None
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+
+    # On nettoie d'abord les éventuels joueurs fantômes déconnectés
+    await verifier_connexions_actives()
 
     mon_role = None
     if places["J1"] is None:
@@ -118,16 +128,18 @@ async def websocket_endpoint(websocket: WebSocket):
             data = json.loads(texte)
             action = data.get("action")
 
+            # Ignorer les messages de maintien de connexion
+            if action == "pong":
+                continue
+
             if places["J1"] is None or places["J2"] is None:
                 continue
 
-            # Relancer une partie après une victoire
             if action == "rejouer" and etat["partie_terminee"]:
                 reinitialiser_partie()
                 await envoyer_etat_complet("Nouvelle partie ! Joueur 1 pose la 1ère carte face visible.")
                 continue
 
-            # Vérifier que c'est bien le tour du joueur et que la partie n'est pas finie
             if etat["partie_terminee"] or etat["tour"] != mon_role:
                 continue
 
@@ -135,11 +147,9 @@ async def websocket_endpoint(websocket: WebSocket):
             nom_moi = "Joueur 1" if mon_role == "J1" else "Joueur 2"
             nom_autre = "Joueur 2" if mon_role == "J1" else "Joueur 1"
 
-            # ACTION 1 : Poser une carte
             if action == "jouer_carte":
                 carte = data.get("valeur")
                 if carte in cartes_autorisees and mains[mon_role][carte] > 0:
-                    # Si l'adversaire avait 0 carte et qu'on ne l'a pas accusé de menteur, il gagne !
                     if total_cartes(autre_role) == 0:
                         etat["partie_terminee"] = True
                         await envoyer_etat_complet(f"🏆 {nom_autre} n'a plus de cartes et remporte la partie !")
@@ -149,17 +159,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     etat["tas"].append(carte)
                     etat["dernier_poseur"] = mon_role
 
-                    # Si c'est la 1ère carte du tour : elle est posée FACE VISIBLE et fixe l'annonce
                     if len(etat["tas"]) == 1:
                         etat["carte_annoncee"] = carte
                         etat["carte_visuelle"] = carte
                         msg = f"{nom_moi} lance le tour avec {noms_fr[carte]} (face visible)."
-                    # Sinon : la carte est posée FACE CACHÉE
                     else:
                         etat["carte_visuelle"] = "dos"
                         msg = f"{nom_moi} pose une carte face cachée (Annonce : {noms_fr[etat['carte_annoncee']]})."
 
-                    # Vérification immédiate si le joueur vient de vider sa main sur la 1ère carte
                     if total_cartes(mon_role) == 0 and len(etat["tas"]) == 1:
                         etat["partie_terminee"] = True
                         await envoyer_etat_complet(f"🏆 {nom_moi} a posé sa dernière carte et gagne la partie !")
@@ -167,34 +174,28 @@ async def websocket_endpoint(websocket: WebSocket):
                         etat["tour"] = autre_role
                         await envoyer_etat_complet(msg)
 
-            # ACTION 2 : Cliquer sur "Menteur !"
             elif action == "menteur" and len(etat["tas"]) >= 2:
                 derniere_carte = etat["tas"][-1]
                 carte_attendue = etat["carte_annoncee"]
                 nb_tas = len(etat["tas"])
 
-                # Règle : si la carte posée est la MÊME que celle annoncée -> celui qui clique récupère tout
                 if derniere_carte == carte_attendue:
                     perdant = mon_role
                     nom_perdant = nom_moi
                     verdict = f"Pas de mensonge ! C'était bien un {noms_fr[derniere_carte]}."
-                # Sinon (il a menti) -> l'autre (celui qui a posé la carte) récupère tout
                 else:
                     perdant = autre_role
                     nom_perdant = nom_autre
                     verdict = f"Menteur démasqué ! C'était un {noms_fr[derniere_carte]} au lieu de {noms_fr[carte_attendue]}."
 
-                # Transfert de toutes les cartes du tas vers la main de celui qui ramasse
                 for c in etat["tas"]:
                     mains[perdant][c] += 1
 
-                # Réinitialisation du tas et celui qui a ramassé recommence le tour
                 etat["tas"] = []
                 etat["carte_annoncee"] = None
                 etat["carte_visuelle"] = "dos"
                 etat["tour"] = perdant
 
-                # Si l'autre joueur avait 0 carte et a réussi son bluff, il gagne la partie !
                 if total_cartes(autre_role) == 0 and perdant == mon_role:
                     etat["partie_terminee"] = True
                     await envoyer_etat_complet(f"{verdict} 🏆 {nom_autre} n'a plus de cartes et gagne !")
