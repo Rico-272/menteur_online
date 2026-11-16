@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Duel Joueur 1 vs Joueur 2</title>
+  <title>Duel 64 Cartes</title>
   <style>
     body {
       background-color: #2e7d32;
@@ -17,7 +17,6 @@
       font-family: Arial, sans-serif;
     }
 
-    /* Écran de blocage pour le 3e visiteur et suivants */
     #ecran-bloque {
       display: none;
       position: fixed;
@@ -33,12 +32,8 @@
       box-sizing: border-box;
     }
 
-    #ecran-bloque h1 {
-      color: #ef5350;
-      margin-bottom: 10px;
-    }
+    #ecran-bloque h1 { color: #ef5350; margin-bottom: 10px; }
 
-    /* Bandeau d'information en haut */
     #en-tete {
       display: flex;
       flex-direction: column;
@@ -64,7 +59,6 @@
       font-size: 14px;
     }
 
-    /* Tapis central */
     #tapis-de-jeu {
       display: flex;
       justify-content: center;
@@ -117,12 +111,31 @@
       );
     }
 
-    /* Main du joueur */
+    /* Main du joueur avec compteurs au-dessus de chaque carte */
     #main-joueur {
       display: flex;
-      gap: 18px;
+      gap: 20px;
       justify-content: center;
       flex-wrap: wrap;
+    }
+
+    .emplacement-carte {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .compteur-carte {
+      background-color: rgba(0, 0, 0, 0.45);
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 16px;
+      padding: 4px 14px;
+      border-radius: 12px;
+      min-width: 24px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
     .bouton-carte {
@@ -146,7 +159,7 @@
     }
 
     .bouton-carte:disabled {
-      opacity: 0.45;
+      opacity: 0.4;
       cursor: not-allowed;
     }
 
@@ -158,20 +171,17 @@
 </head>
 <body>
 
-  <!-- Écran affiché uniquement à partir de la 3e personne -->
   <div id="ecran-bloque">
     <h1>Accès bloqué</h1>
     <p id="texte-blocage">La salle est pleine (2/2 joueurs connectés).</p>
     <p style="font-size: 14px; color: #aaa;">Veuillez patienter qu'un joueur quitte la partie puis rechargez la page.</p>
   </div>
 
-  <!-- En-tête de la partie -->
   <div id="en-tete">
     <div id="badge-role">Connexion au serveur...</div>
     <div id="info-action">En attente...</div>
   </div>
 
-  <!-- Tapis central -->
   <div id="tapis-de-jeu">
     <div id="carte-coeur" class="carte rouge"><div class="symbole"></div></div>
     <div id="carte-carreau" class="carte rouge"><div class="symbole"></div></div>
@@ -180,12 +190,27 @@
     <div id="carte-dos" class="carte"></div>
   </div>
 
-  <!-- Cartes cliquables -->
+  <!-- Cartes cliquables avec le nombre au-dessus de chacune -->
   <div id="main-joueur">
-    <button id="btn-coeur" class="bouton-carte rouge" onclick="envoyerChoix('coeur')" disabled>♥</button>
-    <button id="btn-carreau" class="bouton-carte rouge" onclick="envoyerChoix('carreau')" disabled>♦</button>
-    <button id="btn-trefle" class="bouton-carte noir" onclick="envoyerChoix('trefle')" disabled>♣</button>
-    <button id="btn-pique" class="bouton-carte noir" onclick="envoyerChoix('pique')" disabled>♠</button>
+    <div class="emplacement-carte">
+      <span id="compte-coeur" class="compteur-carte">0</span>
+      <button id="btn-coeur" class="bouton-carte rouge" onclick="envoyerChoix('coeur')" disabled>♥</button>
+    </div>
+
+    <div class="emplacement-carte">
+      <span id="compte-carreau" class="compteur-carte">0</span>
+      <button id="btn-carreau" class="bouton-carte rouge" onclick="envoyerChoix('carreau')" disabled>♦</button>
+    </div>
+
+    <div class="emplacement-carte">
+      <span id="compte-trefle" class="compteur-carte">0</span>
+      <button id="btn-trefle" class="bouton-carte noir" onclick="envoyerChoix('trefle')" disabled>♣</button>
+    </div>
+
+    <div class="emplacement-carte">
+      <span id="compte-pique" class="compteur-carte">0</span>
+      <button id="btn-pique" class="bouton-carte noir" onclick="envoyerChoix('pique')" disabled>♠</button>
+    </div>
   </div>
 
   <script>
@@ -194,44 +219,56 @@
     
     const badgeRole = document.getElementById("badge-role");
     const infoAction = document.getElementById("info-action");
-    const boutons = document.querySelectorAll(".bouton-carte");
+    let duelActif = false;
+    let maMain = { coeur: 0, carreau: 0, trefle: 0, pique: 0 };
 
-    function activerBoutons(actif) {
-      boutons.forEach(btn => btn.disabled = !actif);
+    function mettreAJourBoutons() {
+      const types = ["coeur", "carreau", "trefle", "pique"];
+      types.forEach(type => {
+        const nb = maMain[type];
+        document.getElementById("compte-" + type).textContent = nb;
+        // Le bouton est actif uniquement si le duel est en cours ET qu'il reste au moins 1 carte
+        document.getElementById("btn-" + type).disabled = !(duelActif && nb > 0);
+      });
     }
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      // 1. Salle pleine (3e joueur et suivants)
       if (data.type === "complet") {
         document.getElementById("texte-blocage").textContent = data.message;
         document.getElementById("ecran-bloque").style.display = "flex";
-        activerBoutons(false);
+        duelActif = false;
+        mettreAJourBoutons();
       }
 
-      // 2. Attribution du rôle (Joueur 1 ou Joueur 2)
       else if (data.type === "attribution") {
         badgeRole.textContent = (data.role === "J1") ? "Vous êtes le Joueur 1" : "Vous êtes le Joueur 2";
         afficherCarte(data.carte);
       }
 
-      // 3. Mise à jour du nombre de joueurs (1/2 ou 2/2)
-      else if (data.type === "statut_salle") {
-        if (data.nb_joueurs < 2) {
-          infoAction.textContent = "En attente de l'autre joueur (1/2)...";
-          activerBoutons(false);
-          afficherCarte("dos");
-        } else {
-          infoAction.textContent = "Duel prêt (2/2) ! Posez une carte.";
-          activerBoutons(true);
-        }
+      else if (data.type === "maj_main") {
+        maMain = data.main;
+        mettreAJourBoutons();
       }
 
-      // 4. Carte jouée pendant le duel
+      else if (data.type === "statut_salle") {
+        if (data.nb_joueurs < 2) {
+          duelActif = false;
+          maMain = { coeur: 0, carreau: 0, trefle: 0, pique: 0 };
+          infoAction.textContent = "En attente de l'autre joueur (1/2)...";
+          afficherCarte("dos");
+        } else {
+          duelActif = true;
+          infoAction.textContent = "Duel prêt (2/2) ! 32 cartes distribuées à chacun.";
+        }
+        mettreAJourBoutons();
+      }
+
       else if (data.type === "carte") {
         afficherCarte(data.valeur);
-        infoAction.textContent = `Dernière carte posée par ${data.par}`;
+        const totalRestant = maMain.coeur + maMain.carreau + maMain.trefle + maMain.pique;
+        infoAction.textContent = `Carte posée par ${data.par} (Il vous reste ${totalRestant} cartes)`;
       }
     };
 
@@ -240,12 +277,13 @@
         badgeRole.textContent = "Déconnecté du serveur";
         badgeRole.style.backgroundColor = "#ef5350";
         badgeRole.style.color = "white";
-        activerBoutons(false);
+        duelActif = false;
+        mettreAJourBoutons();
       }
     };
 
     function envoyerChoix(nomCarte) {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === WebSocket.OPEN && duelActif && maMain[nomCarte] > 0) {
         ws.send(JSON.stringify({ action: "jouer_carte", valeur: nomCarte }));
       }
     }
