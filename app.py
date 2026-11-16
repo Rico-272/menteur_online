@@ -15,14 +15,14 @@ mains = {
     "J2": {"coeur": 0, "carreau": 0, "trefle": 0, "pique": 0}
 }
 
-# Variables du jeu du Menteur
+carte_actuelle = "dos"
+cartes_autorisees = ["coeur", "carreau", "trefle", "pique"]
+
+# Variables ajoutées pour le jeu du Menteur
 tas = []
 carte_annoncee = None
 tour_actuel = "J1"
-carte_actuelle = "dos"
 partie_finie = False
-
-cartes_autorisees = ["coeur", "carreau", "trefle", "pique"]
 noms_fr = {"coeur": "Cœur ♥", "carreau": "Carreau ♦", "trefle": "Trèfle ♣", "pique": "Pique ♠"}
 
 @app.get("/")
@@ -45,7 +45,6 @@ def distribuer_64_cartes():
             "trefle": cartes_joueur.count("trefle"),
             "pique": cartes_joueur.count("pique")
         }
-    
     tas = []
     carte_annoncee = None
     tour_actuel = "J1"
@@ -73,22 +72,9 @@ async def diffuser_aux_joueurs(donnees: dict):
             except Exception:
                 pass
 
-async def diffuser_etat_jeu(info_texte: str):
-    await diffuser_aux_joueurs({
-        "type": "etat_jeu",
-        "tour": tour_actuel,
-        "carte": carte_actuelle,
-        "annonce": carte_annoncee,
-        "taille_tas": len(tas),
-        "nb_j1": sum(mains["J1"].values()),
-        "nb_j2": sum(mains["J2"].values()),
-        "partie_finie": partie_finie,
-        "info": info_texte
-    })
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global carte_actuelle, carte_annoncee, tour_actuel, tas, partie_finie
+    global carte_actuelle, tas, carte_annoncee, tour_actuel, partie_finie
     await websocket.accept()
 
     mon_role = None
@@ -120,11 +106,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await diffuser_aux_joueurs({
         "type": "statut_salle",
-        "nb_joueurs": nb_joueurs
+        "nb_joueurs": nb_joueurs,
+        "tour": tour_actuel
     })
-
-    if nb_joueurs == 2:
-        await diffuser_etat_jeu("Duel prêt ! Joueur 1 pose la 1ère carte face visible.")
 
     try:
         while True:
@@ -135,69 +119,81 @@ async def websocket_endpoint(websocket: WebSocket):
             if places["J1"] is None or places["J2"] is None:
                 continue
 
-            # Relancer une partie
-            if action == "rejouer" and partie_finie:
-                distribuer_64_cartes()
-                await envoyer_main("J1")
-                await envoyer_main("J2")
-                await diffuser_etat_jeu("Nouvelle partie ! Joueur 1 pose la 1ère carte face visible.")
-                continue
-
-            # Vérification du tour
-            if partie_finie or tour_actuel != mon_role:
-                continue
-
             autre_role = "J2" if mon_role == "J1" else "J1"
-            nom_moi = "Joueur 1" if mon_role == "J1" else "Joueur 2"
+            nom_joueur = "Joueur 1" if mon_role == "J1" else "Joueur 2"
             nom_autre = "Joueur 2" if mon_role == "J1" else "Joueur 1"
 
-            # ACTION 1 : Poser une carte
-            if action == "jouer_carte":
+            # Action 1 : Jouer une carte
+            if action == "jouer_carte" and not partie_finie and tour_actuel == mon_role:
                 nouvelle_carte = data.get("valeur")
                 if nouvelle_carte in cartes_autorisees and mains[mon_role][nouvelle_carte] > 0:
                     # Si l'autre avait 0 carte et qu'on ne l'a pas accusé de menteur, il gagne
                     if sum(mains[autre_role].values()) == 0:
                         partie_finie = True
-                        await diffuser_etat_jeu(f"🏆 {nom_autre} n'a plus de carte et gagne la partie !")
+                        await diffuser_aux_joueurs({
+                            "type": "carte",
+                            "valeur": carte_actuelle,
+                            "par": f"VICTOIRE : {nom_autre} n'a plus de carte !",
+                            "tour": tour_actuel,
+                            "annonce": None,
+                            "taille_tas": len(tas),
+                            "partie_finie": True
+                        })
                         continue
 
                     mains[mon_role][nouvelle_carte] -= 1
                     tas.append(nouvelle_carte)
                     await envoyer_main(mon_role)
 
-                    # 1ère carte du tour : face visible + fixe la carte annoncée
+                    # 1ère carte du tour : face visible + fixe l'annonce
                     if len(tas) == 1:
                         carte_annoncee = nouvelle_carte
                         carte_actuelle = nouvelle_carte
-                        msg = f"{nom_moi} commence avec {noms_fr[nouvelle_carte]} (face visible)."
+                        texte_info = f"{nom_joueur} ouvre avec {noms_fr[nouvelle_carte]} (face visible)"
                     # Cartes suivantes : face cachée
                     else:
                         carte_actuelle = "dos"
-                        msg = f"{nom_moi} pose une carte face cachée (Annonce : {noms_fr[carte_annoncee]})."
+                        texte_info = f"{nom_joueur} pose face cachée (Annonce : {noms_fr[carte_annoncee]})"
 
-                    # Victoire immédiate si le joueur vide sa main sur la 1ère carte
+                    # Victoire si 0 carte dès la 1ère pose
                     if sum(mains[mon_role].values()) == 0 and len(tas) == 1:
                         partie_finie = True
-                        await diffuser_etat_jeu(f"🏆 {nom_moi} n'a plus de carte et gagne la partie !")
+                        await diffuser_aux_joueurs({
+                            "type": "carte",
+                            "valeur": carte_actuelle,
+                            "par": f"VICTOIRE : {nom_joueur} n'a plus de carte !",
+                            "tour": tour_actuel,
+                            "annonce": None,
+                            "taille_tas": len(tas),
+                            "partie_finie": True
+                        })
                     else:
                         tour_actuel = autre_role
-                        await diffuser_etat_jeu(msg)
+                        await diffuser_aux_joueurs({
+                            "type": "carte",
+                            "valeur": carte_actuelle,
+                            "par": texte_info,
+                            "tour": tour_actuel,
+                            "annonce": carte_annoncee,
+                            "taille_tas": len(tas),
+                            "partie_finie": False
+                        })
 
-            # ACTION 2 : Cliquer sur "Menteur !"
-            elif action == "menteur" and len(tas) >= 2:
+            # Action 2 : Cliquer sur Menteur !
+            elif action == "menteur" and not partie_finie and tour_actuel == mon_role and len(tas) >= 2:
                 derniere_carte = tas[-1]
                 nb_ramasse = len(tas)
 
-                # Si la carte posée est la même que celle annoncée -> celui qui clique ramasse tout
+                # Si c'est la même carte que celle annoncée -> celui qui clique récupère tout
                 if derniere_carte == carte_annoncee:
                     perdant = mon_role
-                    nom_perdant = nom_moi
+                    nom_perdant = nom_joueur
                     verdict = f"Faux ! C'était bien un {noms_fr[derniere_carte]}."
-                # Sinon -> celui qui a posé la carte ramasse tout
+                # Sinon -> l'autre récupère tout
                 else:
                     perdant = autre_role
                     nom_perdant = nom_autre
-                    verdict = f"Menteur démasqué ! C'était un {noms_fr[derniere_carte]}."
+                    verdict = f"Menteur ! C'était un {noms_fr[derniere_carte]}."
 
                 for c in tas:
                     mains[perdant][c] += 1
@@ -212,16 +208,42 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 if sum(mains[autre_role].values()) == 0 and perdant == mon_role:
                     partie_finie = True
-                    await diffuser_etat_jeu(f"{verdict} 🏆 {nom_autre} n'a plus de carte et gagne !")
+                    msg_final = f"{verdict} VICTOIRE : {nom_autre} n'a plus de carte !"
                 else:
-                    await diffuser_etat_jeu(f"{verdict} {nom_perdant} ramasse {nb_ramasse} carte(s) et recommence.")
+                    msg_final = f"{verdict} {nom_perdant} ramasse {nb_ramasse} carte(s) et recommence."
+
+                await diffuser_aux_joueurs({
+                    "type": "carte",
+                    "valeur": "dos",
+                    "par": msg_final,
+                    "tour": tour_actuel,
+                    "annonce": None,
+                    "taille_tas": 0,
+                    "partie_finie": partie_finie
+                })
+
+            # Action 3 : Rejouer
+            elif action == "rejouer" and partie_finie:
+                distribuer_64_cartes()
+                await envoyer_main("J1")
+                await envoyer_main("J2")
+                await diffuser_aux_joueurs({
+                    "type": "carte",
+                    "valeur": "dos",
+                    "par": "Nouvelle partie ! Joueur 1 commence.",
+                    "tour": "J1",
+                    "annonce": None,
+                    "taille_tas": 0,
+                    "partie_finie": False
+                })
 
     except WebSocketDisconnect:
         if places[mon_role] == websocket:
             places[mon_role] = None
             carte_actuelle = "dos"
-            carte_annoncee = None
             tas = []
+            carte_annoncee = None
+            tour_actuel = "J1"
             partie_finie = False
             mains["J1"] = {"coeur": 0, "carreau": 0, "trefle": 0, "pique": 0}
             mains["J2"] = {"coeur": 0, "carreau": 0, "trefle": 0, "pique": 0}
@@ -229,5 +251,6 @@ async def websocket_endpoint(websocket: WebSocket):
             nb_restants = sum(1 for v in places.values() if v is not None)
             await diffuser_aux_joueurs({
                 "type": "statut_salle",
-                "nb_joueurs": nb_restants
+                "nb_joueurs": nb_restants,
+                "tour": "J1"
             })
