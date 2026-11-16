@@ -2,200 +2,75 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Duel de Cartes</title>
+  <title>Duel Joueur 1 vs Joueur 2</title>
   <style>
     body {
       background-color: #2e7d32;
-      margin: 0;
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
       display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* --- ÉCRAN 1 : CONNEXION --- */
-    #ecran-connexion {
-      background-color: #ffffff;
-      padding: 35px;
-      border-radius: 14px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-      text-align: center;
-      width: 310px;
-    }
-
-    #ecran-connexion h2 { margin-top: 0; color: #1b5e20; }
-
-    #champ-pseudo {
-      width: 100%;
-      padding: 12px;
-      margin: 15px 0;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-
-    #btn-rejoindre {
-      width: 100%;
-      padding: 12px;
-      background-color: #2e7d32;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    #btn-rejoindre:disabled {
-      background-color: #9e9e9e;
-      cursor: not-allowed;
-    }
-
-    #etat-serveur {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #666;
-    }
-
-    /* --- ÉCRAN 2 : CHOIX DE L'ADVERSAIRE (LOBBY) --- */
-    #ecran-lobby {
-      display: none;
-      background-color: #ffffff;
-      padding: 30px;
-      border-radius: 14px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-      width: 420px;
-      max-width: 90vw;
-    }
-
-    #ecran-lobby h2 {
-      margin-top: 0;
-      color: #1b5e20;
-      border-bottom: 2px solid #e8f5e9;
-      padding-bottom: 10px;
-    }
-
-    #alerte-defi {
-      display: none;
-      background-color: #fff8e1;
-      border: 2px solid #ffb300;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .actions-defi {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .btn-accepter {
-      background-color: #2e7d32;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .btn-refuser {
-      background-color: #d32f2f;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    #liste-adversaires {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .ligne-joueur {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      border-bottom: 1px solid #eeeeee;
-    }
-
-    .ligne-joueur:last-child { border-bottom: none; }
-
-    .btn-defier {
-      background-color: #1565c0;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .btn-defier:hover { background-color: #0d47a1; }
-
-    .statut-occupe {
-      color: #757575;
-      font-style: italic;
-      font-size: 14px;
-    }
-
-    /* --- ÉCRAN 3 : ARÈNE DE DUEL --- */
-    #ecran-jeu {
-      display: none;
-      width: 100%;
-      min-height: 100vh;
-      padding: 25px;
-      box-sizing: border-box;
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 30px 20px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
     }
 
-    #barre-duel {
-      width: 100%;
-      max-width: 700px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 12px 20px;
-      border-radius: 12px;
+    /* Écran de blocage pour le 3e visiteur et suivants */
+    #ecran-bloque {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(20, 20, 20, 0.95);
       color: white;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 100;
+      padding: 20px;
       box-sizing: border-box;
     }
 
-    #btn-quitter-duel {
-      background-color: #d32f2f;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
+    #ecran-bloque h1 {
+      color: #ef5350;
+      margin-bottom: 10px;
+    }
+
+    /* Bandeau d'information en haut */
+    #en-tete {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #badge-role {
+      background-color: #ffd54f;
+      color: #212121;
       font-weight: bold;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
     #info-action {
       color: white;
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0, 0, 0, 0.3);
       padding: 8px 18px;
       border-radius: 20px;
-      font-size: 15px;
-      margin-top: 15px;
+      font-size: 14px;
     }
 
+    /* Tapis central */
     #tapis-de-jeu {
       display: flex;
       justify-content: center;
       align-items: center;
       flex-grow: 1;
+      width: 100%;
     }
 
     .carte {
@@ -242,6 +117,7 @@
       );
     }
 
+    /* Main du joueur */
     #main-joueur {
       display: flex;
       gap: 18px;
@@ -261,12 +137,17 @@
       align-items: center;
       font-size: 48px;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     }
 
-    .bouton-carte:hover {
+    .bouton-carte:hover:not(:disabled) {
       transform: translateY(-12px);
       box-shadow: 0 12px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .bouton-carte:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .bouton-carte.actif {
@@ -277,211 +158,114 @@
 </head>
 <body>
 
-  <!-- ÉCRAN 1 : Choix du pseudo -->
-  <div id="ecran-connexion">
-    <h2>Entrez votre pseudo</h2>
-    <input type="text" id="champ-pseudo" placeholder="Votre pseudo..." maxlength="15" onkeypress="if(event.key === 'Enter') rejoindreSalon()">
-    <button id="btn-rejoindre" onclick="rejoindreSalon()">Continuer</button>
-    <div id="etat-serveur">Connexion au serveur...</div>
+  <!-- Écran affiché uniquement à partir de la 3e personne -->
+  <div id="ecran-bloque">
+    <h1>Accès bloqué</h1>
+    <p id="texte-blocage">La salle est pleine (2/2 joueurs connectés).</p>
+    <p style="font-size: 14px; color: #aaa;">Veuillez patienter qu'un joueur quitte la partie puis rechargez la page.</p>
   </div>
 
-  <!-- ÉCRAN 2 : Sélection d'un joueur à défier -->
-  <div id="ecran-lobby">
-    <h2>Choisir un adversaire</h2>
-    
-    <div id="alerte-defi">
-      <div id="texte-defi"><strong>Joueur</strong> vous défie en duel !</div>
-      <div class="actions-defi">
-        <button class="btn-accepter" onclick="repondreDefi(true)">Accepter</button>
-        <button class="btn-refuser" onclick="repondreDefi(false)">Refuser</button>
-      </div>
-    </div>
-
-    <ul id="liste-adversaires">
-      <li style="color: #777; text-align: center;">En attente d'autres joueurs...</li>
-    </ul>
+  <!-- En-tête de la partie -->
+  <div id="en-tete">
+    <div id="badge-role">Connexion au serveur...</div>
+    <div id="info-action">En attente...</div>
   </div>
 
-  <!-- ÉCRAN 3 : Table de duel -->
-  <div id="ecran-jeu">
-    <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-      <div id="barre-duel">
-        <span id="titre-duel">Duel : Moi vs Adversaire</span>
-        <button id="btn-quitter-duel" onclick="quitterDuel()">Quitter le duel</button>
-      </div>
-      <div id="info-action">Posez une carte !</div>
-    </div>
+  <!-- Tapis central -->
+  <div id="tapis-de-jeu">
+    <div id="carte-coeur" class="carte rouge"><div class="symbole"></div></div>
+    <div id="carte-carreau" class="carte rouge"><div class="symbole"></div></div>
+    <div id="carte-trefle" class="carte noir"><div class="symbole"></div></div>
+    <div id="carte-pique" class="carte noir"><div class="symbole"></div></div>
+    <div id="carte-dos" class="carte"></div>
+  </div>
 
-    <div id="tapis-de-jeu">
-      <div id="carte-coeur" class="carte rouge"><div class="symbole"></div></div>
-      <div id="carte-carreau" class="carte rouge"><div class="symbole"></div></div>
-      <div id="carte-trefle" class="carte noir"><div class="symbole"></div></div>
-      <div id="carte-pique" class="carte noir"><div class="symbole"></div></div>
-      <div id="carte-dos" class="carte"></div>
-    </div>
-
-    <div id="main-joueur">
-      <button id="btn-coeur" class="bouton-carte rouge" onclick="envoyerChoix('coeur')">♥</button>
-      <button id="btn-carreau" class="bouton-carte rouge" onclick="envoyerChoix('carreau')">♦</button>
-      <button id="btn-trefle" class="bouton-carte noir" onclick="envoyerChoix('trefle')">♣</button>
-      <button id="btn-pique" class="bouton-carte noir" onclick="envoyerChoix('pique')">♠</button>
-    </div>
+  <!-- Cartes cliquables -->
+  <div id="main-joueur">
+    <button id="btn-coeur" class="bouton-carte rouge" onclick="envoyerChoix('coeur')" disabled>♥</button>
+    <button id="btn-carreau" class="bouton-carte rouge" onclick="envoyerChoix('carreau')" disabled>♦</button>
+    <button id="btn-trefle" class="bouton-carte noir" onclick="envoyerChoix('trefle')" disabled>♣</button>
+    <button id="btn-pique" class="bouton-carte noir" onclick="envoyerChoix('pique')" disabled>♠</button>
   </div>
 
   <script>
     const protocole = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const urlWs = `${protocole}//${window.location.host}/ws`;
-    let ws = null;
+    const ws = new WebSocket(`${protocole}//${window.location.host}/ws`);
     
-    let monId = "";
-    let monPseudo = "";
-    let challengerEnAttenteId = null;
+    const badgeRole = document.getElementById("badge-role");
+    const infoAction = document.getElementById("info-action");
+    const boutons = document.querySelectorAll(".bouton-carte");
 
-    function initialiserWebSocket(pseudoAEnvoyerApresConnexion = null) {
-      const etatDiv = document.getElementById("etat-serveur");
-      etatDiv.textContent = "Connexion au serveur en cours...";
-      etatDiv.style.color = "#e65100";
+    function activerBoutons(actif) {
+      boutons.forEach(btn => btn.disabled = !actif);
+    }
 
-      ws = new WebSocket(urlWs);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-      ws.onopen = () => {
-        etatDiv.textContent = "Serveur prêt !";
-        etatDiv.style.color = "#2e7d32";
-        if (pseudoAEnvoyerApresConnexion) {
-          ws.send(JSON.stringify({ action: "rejoindre", pseudo: pseudoAEnvoyerApresConnexion }));
+      // 1. Salle pleine (3e joueur et suivants)
+      if (data.type === "complet") {
+        document.getElementById("texte-blocage").textContent = data.message;
+        document.getElementById("ecran-bloque").style.display = "flex";
+        activerBoutons(false);
+      }
+
+      // 2. Attribution du rôle (Joueur 1 ou Joueur 2)
+      else if (data.type === "attribution") {
+        badgeRole.textContent = (data.role === "J1") ? "Vous êtes le Joueur 1" : "Vous êtes le Joueur 2";
+        afficherCarte(data.carte);
+      }
+
+      // 3. Mise à jour du nombre de joueurs (1/2 ou 2/2)
+      else if (data.type === "statut_salle") {
+        if (data.nb_joueurs < 2) {
+          infoAction.textContent = "En attente de l'autre joueur (1/2)...";
+          activerBoutons(false);
+          afficherCarte("dos");
+        } else {
+          infoAction.textContent = "Duel prêt (2/2) ! Posez une carte.";
+          activerBoutons(true);
         }
-      };
+      }
 
-      ws.onerror = () => {
-        etatDiv.textContent = "Erreur de connexion WebSocket.";
-        etatDiv.style.color = "#d32f2f";
-      };
+      // 4. Carte jouée pendant le duel
+      else if (data.type === "carte") {
+        afficherCarte(data.valeur);
+        infoAction.textContent = `Dernière carte posée par ${data.par}`;
+      }
+    };
 
-      ws.onclose = () => {
-        etatDiv.textContent = "Déconnecté du serveur. Cliquez sur Continuer pour reconnecter.";
-        etatDiv.style.color = "#d32f2f";
-      };
+    ws.onclose = () => {
+      if (document.getElementById("ecran-bloque").style.display !== "flex") {
+        badgeRole.textContent = "Déconnecté du serveur";
+        badgeRole.style.backgroundColor = "#ef5350";
+        badgeRole.style.color = "white";
+        activerBoutons(false);
+      }
+    };
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+    function envoyerChoix(nomCarte) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "jouer_carte", valeur: nomCarte }));
+      }
+    }
 
-        if (data.type === "bienvenue") {
-          monId = data.id;
-          monPseudo = data.pseudo;
-          afficherEcran("ecran-lobby");
-        }
+    function afficherCarte(nomCarte) {
+      document.querySelectorAll('.carte').forEach(c => c.classList.remove('visible'));
+      document.querySelectorAll('.bouton-carte').forEach(b => b.classList.remove('actif'));
 
-        else if (data.type === "liste_joueurs") {
-          const ul = document.getElementById("liste-adversaires");
-          ul.innerHTML = "";
+      const carteCible = document.getElementById('carte-' + nomCarte);
+      if (carteCible) {
+        void carteCible.offsetWidth;
+        carteCible.classList.add('visible');
+      }
 
-Utilisez le code avec précaution.
-const autresJoueurs = data.joueurs.filter(j => j.id !== monId);
-if (autresJoueurs.length === 0) {
-ul.innerHTML = 'Aucun autre joueur connecté pour le moment.';
-return;
-}
-autresJoueurs.forEach(j => {
-const li = document.createElement("li");
-li.className = "ligne-joueur";
-const spanNom = document.createElement("span");
-spanNom.textContent = j.pseudo;
-spanNom.style.fontWeight = "bold";
-li.appendChild(spanNom);
-if (j.en_duel) {
-const spanStatut = document.createElement("span");
-spanStatut.className = "statut-occupe";
-spanStatut.textContent = "En duel...";
-li.appendChild(spanStatut);
-} else {
-const btn = document.createElement("button");
-btn.className = "btn-defier";
-btn.textContent = "Défier";
-btn.onclick = () => defierJoueur(j.id, j.pseudo);
-li.appendChild(btn);
-}
-ul.appendChild(li);
-});
-}
-else if (data.type === "defi_recu") {
-challengerEnAttenteId = data.de_id;
-document.getElementById("texte-defi").innerHTML = <strong>${data.de_pseudo}</strong> vous défie en duel !;
-document.getElementById("alerte-defi").style.display = "block";
-}
-else if (data.type === "defi_refuse") {
-alert(${data.par} a refusé votre défi.);
-}
-else if (data.type === "debut_duel") {
-document.getElementById("alerte-defi").style.display = "none";
-document.getElementById("titre-duel").textContent = ${monPseudo} VS ${data.adversaire};
-document.getElementById("info-action").textContent = "Le duel commence ! Choisissez une carte.";
-afficherCarte("dos");
-afficherEcran("ecran-jeu");
-}
-else if (data.type === "carte_duel") {
-afficherCarte(data.valeur);
-document.getElementById("info-action").textContent = Carte posée par ${data.par};
-}
-else if (data.type === "fin_duel") {
-alert(data.raison);
-afficherEcran("ecran-lobby");
-}
-};
-}
-// Lancement de la connexion dès l'ouverture de la page
-initialiserWebSocket();
-function afficherEcran(nomEcran) {
-document.getElementById("ecran-connexion").style.display = "none";
-document.getElementById("ecran-lobby").style.display = "none";
-document.getElementById("ecran-jeu").style.display = "none";
-document.getElementById(nomEcran).style.display = (nomEcran === "ecran-jeu") ? "flex" : "block";
-}
-function rejoindreSalon() {
-const saisie = document.getElementById("champ-pseudo").value.trim();
-if (!saisie) {
-alert("Veuillez entrer un pseudo.");
-return;
-}
-if (ws && ws.readyState === WebSocket.OPEN) {
-ws.send(JSON.stringify({ action: "rejoindre", pseudo: saisie }));
-} else {
-// Si la connexion était fermée ou pas encore ouverte, on la lance et on envoie le pseudo dès qu'elle est prête
-initialiserWebSocket(saisie);
-}
-}
-function defierJoueur(cibleId, ciblePseudo) {
-ws.send(JSON.stringify({ action: "defier", cible_id: cibleId }));
-alert(Invitation envoyée à ${ciblePseudo} ! En attente de sa réponse...);
-}
-function repondreDefi(accepte) {
-if (challengerEnAttenteId) {
-ws.send(JSON.stringify({
-action: "repondre_defi",
-de_id: challengerEnAttenteId,
-accepte: accepte
-}));
-document.getElementById("alerte-defi").style.display = "none";
-challengerEnAttenteId = null;
-}
-}
-function quitterDuel() {
-ws.send(JSON.stringify({ action: "quitter_duel" }));
-}
-function envoyerChoix(nomCarte) {
-if (ws && ws.readyState === WebSocket.OPEN) {
-ws.send(JSON.stringify({ action: "jouer_carte", valeur: nomCarte }));
-}
-}
-function afficherCarte(nomCarte) {
-document.querySelectorAll('.carte').forEach(c => c.classList.remove('visible'));
-document.querySelectorAll('.bouton-carte').forEach(b => b.classList.remove('actif'));
-const carteCible = document.getElementById('carte-' + nomCarte);
-if (carteCible) {
-void carteCible.offsetWidth;
-carteCible.classList.add('visible');
-}
-const boutonCible = document.getElementById('btn-' + nomCarte);
-if (boutonCible) {
-boutonCible.classList.add('actif');
-}
-}
+      const boutonCible = document.getElementById('btn-' + nomCarte);
+      if (boutonCible) {
+        boutonCible.classList.add('actif');
+      }
+    }
+  </script>
+
+</body>
+</html>
